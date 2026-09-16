@@ -1,0 +1,226 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ------------------------------------------------------------------------- */
+/*  Palettes.                                                                */
+/*                                                                           */
+/*  :root            light consumer canvas  -> the CUSTOMER phone            */
+/*  .theme-provider  dark infrastructure    -> the PROVIDER / researcher phone*/
+/*                                                                           */
+/*  Same variable names in both, so every component class below works on      */
+/*  either surface untouched.                                                 */
+/* ------------------------------------------------------------------------- */
+
+:root {
+  /* Canvas */
+  --vd-base: 249 250 251;
+  --vd-surface: 255 255 255;
+  --vd-raised: 255 255 255;
+  --vd-sunken: 244 245 247;
+
+  /* Structure */
+  --vd-line: 228 231 236;
+  --vd-line-strong: 206 211 219;
+
+  /* Type */
+  --vd-ink: 15 20 27;
+  --vd-ink-muted: 84 92 105;
+  --vd-ink-subtle: 132 141 154;
+  --vd-ink-invert: 255 255 255;
+
+  /* Verified / success — emerald. Never used for anything else. */
+  --vd-brand: 5 150 105;
+  --vd-brand-soft: 16 185 129;
+  --vd-brand-deep: 4 108 78;
+  --vd-brand-wash: 236 253 245;
+
+  /* Verification failure — rose. Never used for anything else. */
+  --vd-danger: 225 29 72;
+  --vd-danger-soft: 244 63 94;
+  --vd-danger-wash: 255 241 242;
+
+  /* Warning — amber. Includes the provider's downgraded state. */
+  --vd-warn: 180 83 9;
+  --vd-warn-wash: 255 247 237;
+
+  --vd-info: 2 132 199;
+  --vd-shadow: 15 23 42;
+
+  color-scheme: light;
+}
+
+.theme-provider {
+  --vd-base: 8 11 16;
+  --vd-surface: 14 19 26;
+  --vd-raised: 20 27 36;
+  --vd-sunken: 11 15 21;
+
+  --vd-line: 30 40 52;
+  --vd-line-strong: 48 62 79;
+
+  --vd-ink: 233 239 246;
+  --vd-ink-muted: 151 165 182;
+  --vd-ink-subtle: 105 121 141;
+  --vd-ink-invert: 6 12 10;
+
+  --vd-brand: 16 185 129;
+  --vd-brand-soft: 52 211 153;
+  --vd-brand-deep: 4 120 87;
+  --vd-brand-wash: 6 33 28;
+
+  --vd-danger: 244 63 94;
+  --vd-danger-soft: 251 113 133;
+  --vd-danger-wash: 43 8 17;
+
+  --vd-warn: 245 158 11;
+  --vd-warn-wash: 42 26 4;
+
+  --vd-info: 56 189 248;
+  --vd-shadow: 0 0 0;
+
+  color-scheme: dark;
+}
+
+html,
+body {
+  height: 100%;
+}
+
+body {
+  @apply bg-base text-ink font-sans antialiased;
+  /* Prevent the rubber-band scroll that makes a demo feel broken when someone
+     is holding the phone and swiping around the verdict screen. */
+  overscroll-behavior: none;
+  -webkit-tap-highlight-color: transparent;
+}
+
+::selection {
+  background: rgb(var(--vd-ink) / 0.12);
+}
+
+/* Buttons and status chips are pressed by strangers at an event. Nobody should
+   ever accidentally select text or trigger the iOS text-selection magnifier. */
+button {
+  -webkit-user-select: none;
+  user-select: none;
+  touch-action: manipulation;
+}
+
+@layer components {
+  /* --- Surfaces ---------------------------------------------------------- */
+
+  .card {
+    @apply rounded-2xl border border-line bg-surface shadow-card;
+  }
+
+  .card-inset {
+    @apply rounded-xl border border-line bg-sunken;
+  }
+
+  /* --- Status pills ------------------------------------------------------ */
+
+  .pill {
+    @apply inline-flex items-center gap-1.5 rounded-full border px-2.5 py-1 text-2xs font-bold uppercase tracking-wider;
+  }
+
+  .pill-brand {
+    @apply pill border-brand/25 bg-brand/10 text-brand;
+  }
+
+  .pill-danger {
+    @apply pill border-danger/25 bg-danger/10 text-danger;
+  }
+
+  .pill-warn {
+    @apply pill border-warn/25 bg-warn/10 text-warn;
+  }
+
+  .pill-neutral {
+    @apply pill border-line-strong bg-sunken text-ink-muted;
+  }
+
+  /* --- Buttons ---------------------------------------------------------- */
+  /* Large by default: these are tapped quickly, often by someone standing up
+     and holding the phone in one hand. Minimum target is comfortably 44px. */
+
+  .btn {
+    @apply inline-flex select-none items-center justify-center gap-2 rounded-xl text-base font-semibold transition-all duration-150 active:scale-[0.98] disabled:pointer-events-none disabled:opacity-40;
+  }
+
+  .btn-primary {
+    @apply btn bg-ink px-5 py-3.5 text-ink-invert hover:opacity-90;
+  }
+
+  .btn-brand {
+    @apply btn bg-brand px-5 py-3.5 text-white shadow-glow hover:brightness-105;
+  }
+
+  .btn-warn {
+    @apply btn bg-warn px-5 py-3.5 text-white shadow-glow-warn hover:brightness-105;
+  }
+
+  .btn-danger {
+    @apply btn bg-danger px-5 py-3.5 text-white shadow-glow-danger hover:brightness-105;
+  }
+
+  .btn-ghost {
+    @apply btn border border-line-strong bg-surface px-5 py-3.5 text-ink-muted hover:border-ink-subtle hover:text-ink;
+  }
+
+  /* The provider's two giant model controls. Deliberately enormous — the
+     researcher presses these one-handed, without looking, mid-conversation. */
+  .btn-slab {
+    @apply btn w-full rounded-2xl px-6 py-7 text-lg font-bold uppercase tracking-wide;
+  }
+
+  /* --- Typography ------------------------------------------------------- */
+
+  .label-eyebrow {
+    @apply text-2xs font-bold uppercase tracking-[0.14em] text-ink-subtle;
+  }
+
+  .mono-chip {
+    @apply rounded-md border border-line bg-sunken px-1.5 py-0.5 font-mono text-[11px] text-ink-muted;
+  }
+
+  .divider {
+    @apply h-px w-full bg-line;
+  }
+
+  /* --- Misc ------------------------------------------------------------- */
+
+  .scroll-slim {
+    scrollbar-width: thin;
+  }
+
+  .scroll-slim::-webkit-scrollbar {
+    width: 6px;
+  }
+
+  .scroll-slim::-webkit-scrollbar-thumb {
+    @apply rounded-full bg-line-strong;
+  }
+
+  /* Safe-area padding for the fixed composer / action bars. Phones at an event
+     are real phones with real home indicators. */
+  .pb-safe {
+    padding-bottom: calc(env(safe-area-inset-bottom, 0px) + 0.75rem);
+  }
+
+  .pt-safe {
+    padding-top: calc(env(safe-area-inset-top, 0px) + 0.75rem);
+  }
+}
+
+/* Respect a participant who has reduced-motion turned on. The choreography is
+   pacing, not meaning — every state is still fully legible without it. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
