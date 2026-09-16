@@ -15,6 +15,8 @@ trust delta becomes data instead of an impression.
 
 The whole loop takes 1–2 minutes per participant.
 
+**Live:** https://customer-discovery-theta.vercel.app
+
 ---
 
 ## ⚠️ This is a simulation
@@ -82,7 +84,8 @@ never type anything again.
 Step 2 is the one to get right: press it while they are still reading step 1, so the downgrade is
 genuinely invisible to them.
 
-Measured on a real device: tap → verdict ≈ 2.4s, and blocked → restore → approved ≈ 3.3s.
+Measured against the live deployment: tap → verdict ≈ 2.4s, blocked → restore → approved ≈ 3.3s,
+participant handoff ≈ 0.3s, verification toggle ≈ 30ms.
 
 ### If something goes wrong mid-conversation
 
@@ -334,7 +337,9 @@ No Realtime configuration is needed in the dashboard — the migration handles t
 
 ### Deploying to Vercel
 
-Pushing to the repository's default branch deploys automatically.
+Deployed at **https://customer-discovery-theta.vercel.app** (Vercel project
+`kartikeya-sharma-s-projects/customer-discovery`, linked to this repo). Pushing to `main` deploys
+automatically; `npx vercel --prod` deploys from the working tree.
 
 `.env.production` is committed, so **a fresh clone deploys with zero configuration** — there is no
 environment-variable step to forget on the morning of an event. That is safe here because both
