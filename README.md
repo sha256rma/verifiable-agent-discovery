@@ -350,8 +350,14 @@ server routes, no secrets, and no webhooks to configure.
 
 ## Testing
 
-`npm run build && npm run typecheck` covers the static side. The behavioural suite drives two
-independent browser contexts — two real phones, separate storage — through the entire script:
+```bash
+npm run build && npm start     # or npm run dev
+npm run test:e2e               # BASE_URL=https://... to point at the deployment
+```
+
+`npm run typecheck` covers the static side. `tests/twophone.js` drives two independent browser
+contexts — two real phones, separate storage — through the entire script, using your installed
+Google Chrome so there is no browser to download:
 
 - the customer phone **cannot** see the downgrade
 - verification OFF + downgraded model → payment approved anyway (the vulnerability)
@@ -361,6 +367,9 @@ independent browser contexts — two real phones, separate storage — through t
 - `NEXT PARTICIPANT` clears the conversation, the questions, the model and the toggle, advances
   the counter, and leaks nothing — in under 5 seconds with no typing
 - no console or page errors on either phone
+
+Each run creates a real rig and leaves its rows behind on purpose, so you can inspect them. Clear
+them with `delete from vdemo_events; delete from vdemo_responses; delete from vdemo_rigs;`.
 
 Two real bugs were caught this way and are worth knowing about if you refactor:
 
