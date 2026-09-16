@@ -25,7 +25,12 @@ const config = {
   theme: {
     extend: {
       colors: {
-        base: 'rgb(var(--vd-base) / <alpha-value>)',
+        // NOT named `base`: Tailwind's font-size scale already owns `text-base`,
+        // and a color of the same name makes that utility emit BOTH a font-size
+        // and a color. `.btn` uses text-base, so every button was one missing
+        // colour class away from rendering canvas-on-canvas. Avoid color names
+        // that collide with a size scale (xs, sm, base, lg, xl...).
+        canvas: 'rgb(var(--vd-canvas) / <alpha-value>)',
         surface: 'rgb(var(--vd-surface) / <alpha-value>)',
         raised: 'rgb(var(--vd-raised) / <alpha-value>)',
         sunken: 'rgb(var(--vd-sunken) / <alpha-value>)',

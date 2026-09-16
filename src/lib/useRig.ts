@@ -1,7 +1,7 @@
 'use client';
 
 import { useCallback, useEffect, useRef, useState } from 'react';
-import { fetchRig } from './rigClient';
+import { RIG, fetchRig, soloRig } from './rigClient';
 import { supabaseBrowser } from './supabaseBrowser';
 import { toCustomerView } from './rigView';
 import type { CustomerRigView, LinkStatus, RigRow } from './types';
@@ -30,7 +30,7 @@ interface RigSync<T> {
  * Writes are ordered by `updated_at`, so a slow poll response can never
  * clobber a newer Realtime push.
  */
-function useRigRow<T>(rigCode: string | null, project: (row: RigRow) => T): RigSync<T> {
+function useRigRow<T>(project: (row: RigRow) => T): RigSync<T> {
   const [rig, setRig] = useState<T | null>(null);
   const [link, setLink] = useState<LinkStatus>('connecting');
   const [error, setError] = useState<string | null>(null);
@@ -51,22 +51,18 @@ function useRigRow<T>(rigCode: string | null, project: (row: RigRow) => T): RigS
   }, []);
 
   const refresh = useCallback(async () => {
-    if (!rigCode) return;
     try {
-      const row = await fetchRig(rigCode);
-      if (!row) {
-        setError(`Session ${rigCode} not found.`);
-        return;
-      }
+      // Either phone may be first to open the demo, so a missing rig is a normal
+      // cold start rather than an error: create it and carry on.
+      const row = (await fetchRig()) ?? (await soloRig());
       accept(row);
     } catch (cause) {
-      setError(cause instanceof Error ? cause.message : 'Could not reach the demo session.');
+      setError(cause instanceof Error ? cause.message : 'Could not reach the demo.');
     }
-  }, [rigCode, accept]);
+  }, [accept]);
 
   // Initial read + unconditional polling.
   useEffect(() => {
-    if (!rigCode) return;
     let alive = true;
 
     void refresh();
@@ -88,11 +84,10 @@ function useRigRow<T>(rigCode: string | null, project: (row: RigRow) => T): RigS
       document.removeEventListener('visibilitychange', onWake);
       window.removeEventListener('online', onWake);
     };
-  }, [rigCode, refresh]);
+  }, [refresh]);
 
   // Realtime fast path.
   useEffect(() => {
-    if (!rigCode) return;
     const supabase = supabaseBrowser();
     if (!supabase) {
       // No Realtime available: polling alone still runs the demo correctly.
@@ -101,14 +96,14 @@ function useRigRow<T>(rigCode: string | null, project: (row: RigRow) => T): RigS
     }
 
     const channel = supabase
-      .channel(`rig:${rigCode}`)
+      .channel(`rig:${RIG}`)
       .on(
         'postgres_changes',
         {
           event: '*',
           schema: 'public',
           table: 'vdemo_rigs',
-          filter: `rig_code=eq.${rigCode.toUpperCase()}`
+          filter: `rig_code=eq.${RIG}`
         },
         (payload) => {
           const row = payload.new as RigRow | undefined;
@@ -125,7 +120,7 @@ function useRigRow<T>(rigCode: string | null, project: (row: RigRow) => T): RigS
     return () => {
       void supabase.removeChannel(channel);
     };
-  }, [rigCode, accept]);
+  }, [accept]);
 
   return { rig, link, error, refresh, apply: accept };
 }
@@ -133,8 +128,8 @@ function useRigRow<T>(rigCode: string | null, project: (row: RigRow) => T): RigS
 const identity = (row: RigRow): RigRow => row;
 
 /** Provider / researcher phone: sees everything. */
-export function useProviderRig(rigCode: string | null): RigSync<RigRow> {
-  return useRigRow(rigCode, identity);
+export function useProviderRig(): RigSync<RigRow> {
+  return useRigRow(identity);
 }
 
 /**
@@ -142,6 +137,6 @@ export function useProviderRig(rigCode: string | null): RigSync<RigRow> {
  * reaches React state, so the deployed model cannot leak into the UI or
  * devtools ahead of the verification result.
  */
-export function useCustomerRig(rigCode: string | null): RigSync<CustomerRigView> {
-  return useRigRow(rigCode, toCustomerView);
+export function useCustomerRig(): RigSync<CustomerRigView> {
+  return useRigRow(toCustomerView);
 }

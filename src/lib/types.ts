@@ -29,10 +29,27 @@ export type VerificationStatus = 'IDLE' | 'PASS' | 'FAIL' | 'NOT_PERFORMED';
 
 export type PaymentStatus = 'IDLE' | 'APPROVED' | 'BLOCKED';
 
-/** Which of the two survey moments a response belongs to. */
-export type SurveyPhase = 'baseline_unverified' | 'after_verification';
+/** Spend bands. A band is harder to answer politely than a 1-5 rating. */
+export type SpendBand = 'none' | 'upto_500' | 'upto_5k' | 'upto_50k' | 'any';
 
-export type LargerPaymentAnswer = 'yes' | 'maybe' | 'no';
+export type NoticedSwap = 'yes' | 'no' | 'unsure';
+export type WouldSwitch = 'yes' | 'maybe' | 'no';
+export type WhatMattered = 'blocked' | 'visibility' | 'both' | 'neither';
+
+/**
+ * One survey per participant, answered after they have seen BOTH conditions.
+ * Every field is optional: a partially answered survey is still real data.
+ */
+export interface SurveyAnswers {
+  comfortWithout?: number | null;
+  comfortWith?: number | null;
+  limitWithout?: SpendBand | null;
+  limitWith?: SpendBand | null;
+  noticedSwap?: NoticedSwap | null;
+  wouldSwitch?: WouldSwitch | null;
+  whatMattered?: WhatMattered | null;
+  freeText?: string | null;
+}
 
 /**
  * The receipt for one payment attempt, decided server-side and frozen at request time.
@@ -93,8 +110,8 @@ export interface RigRow {
 
   last_verification: VerificationReceipt | null;
   last_event: string;
-  /** Set by the researcher to summon a survey on the customer phone. */
-  survey_prompt: SurveyPhase | null;
+  /** Set by the researcher to summon the survey on the customer phone. */
+  survey_open: boolean;
 
   created_at: string;
   updated_at: string;
@@ -121,10 +138,13 @@ export interface SurveyResponseRow {
   session_id: string;
   session_code: string;
   participant_no: number;
-  phase: SurveyPhase;
-  comfort: number | null;
-  larger_payment: LargerPaymentAnswer | null;
+  comfort_without: number | null;
+  comfort_with: number | null;
+  limit_without: SpendBand | null;
+  limit_with: SpendBand | null;
+  noticed_swap: NoticedSwap | null;
+  would_switch: WouldSwitch | null;
+  what_mattered: WhatMattered | null;
   free_text: string | null;
-  verification_enabled_at_time: boolean;
   created_at: string;
 }

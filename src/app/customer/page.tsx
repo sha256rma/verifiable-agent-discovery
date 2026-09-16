@@ -1,19 +1,14 @@
 'use client';
 
-import { use, useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ArrowUp, Loader2, ShieldCheck, Sparkles } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { AlertTriangle, ArrowUp, Loader2, Sparkles } from 'lucide-react';
 import { requestPayment, setVerification, submitSurvey } from '@/lib/rigClient';
 import { useCustomerRig } from '@/lib/useRig';
 import { delay, istClock } from '@/lib/format';
-import {
-  PAYMENT_INTENTS,
-  SIMULATION_LABEL,
-  TIMING,
-  VERIFY_STAGES,
-  matchIntent,
-  type PaymentIntent
-} from '@/lib/demo';
+import { PAYMENT_INTENTS, TIMING, VERIFY_STAGES, matchIntent, type PaymentIntent } from '@/lib/demo';
 import { ConnectionPill } from '@/components/ConnectionPill';
+import { TrustBanner } from '@/components/TrustBanner';
+import { VerificationToggle } from '@/components/VerificationToggle';
 import { PaymentCard } from '@/components/PaymentCard';
 import { PaymentApproved } from '@/components/PaymentApproved';
 import { ProcessingBubble, VerifyingOverlay } from '@/components/VerifyingOverlay';
@@ -23,28 +18,25 @@ import { VerificationDetails } from '@/components/VerificationDetails';
 import { TrustSurvey } from '@/components/TrustSurvey';
 import type {
   CustomerRigView,
-  RigRow,
-  LargerPaymentAnswer,
   LinkStatus,
-  SurveyPhase,
+  RigRow,
+  SurveyAnswers,
   VerificationReceipt
 } from '@/lib/types';
 
 /**
  * PHONE A — the phone handed to a participant.
  *
- * Everything the researcher needs lives on the other phone. The only control
- * here is the verification toggle, which is the independent variable of the
+ * Everything the researcher needs is on the other phone. The only control here
+ * is the verification toggle, which is the independent variable of the
  * experiment and therefore belongs in the participant's hands.
  */
-export default function CustomerPage({ params }: { params: Promise<{ code: string }> }) {
-  const { code } = use(params);
-  const rigCode = code.toUpperCase();
-  const { rig, link, error, apply } = useCustomerRig(rigCode);
+export default function CustomerPage() {
+  const { rig, link, error, apply } = useCustomerRig();
 
-  // Handoff: when the researcher taps NEXT PARTICIPANT the session id changes,
-  // and everything below remounts via `key`. The brief card is what makes the
-  // reset legible instead of looking like a glitch.
+  // Handoff: NEXT PARTICIPANT changes the session id and everything below
+  // remounts via `key`. The brief card makes the reset legible rather than
+  // looking like a glitch.
   const [handingOff, setHandingOff] = useState(false);
   const knownSession = useRef<string | null>(null);
 
@@ -74,9 +66,6 @@ export default function CustomerPage({ params }: { params: Promise<{ code: strin
             <>
               <AlertTriangle className="h-6 w-6 text-warn" />
               <p className="text-sm font-medium text-ink-muted">{error}</p>
-              <p className="text-2xs text-ink-subtle">
-                Check the code on the other phone, or start a new demo.
-              </p>
             </>
           ) : (
             <Loader2 className="h-6 w-6 animate-spin text-ink-subtle" />
@@ -93,16 +82,14 @@ export default function CustomerPage({ params }: { params: Promise<{ code: strin
           <span className="flex h-12 w-12 items-center justify-center rounded-2xl border border-line bg-surface">
             <Sparkles className="h-5 w-5 text-ink-muted" strokeWidth={2.2} />
           </span>
-          <p className="text-lg font-bold tracking-tight text-ink">Ready for next participant</p>
-          <p className="text-sm text-ink-muted">Fresh session — nothing carried over.</p>
+          <p className="text-lg font-bold tracking-tight text-ink">Ready for the next person</p>
+          <p className="text-sm text-ink-muted">Fresh start — nothing carried over.</p>
         </div>
       </main>
     );
   }
 
-  return (
-    <CustomerSession key={rig.session_id} rigCode={rigCode} rig={rig} link={link} onRow={apply} />
-  );
+  return <CustomerSession key={rig.session_id} rig={rig} link={link} onRow={apply} />;
 }
 
 /* -------------------------------------------------------------------------- */
@@ -113,17 +100,15 @@ type Message =
   | { id: string; kind: 'payment'; intent: PaymentIntent }
   | { id: string; kind: 'approved'; receipt: VerificationReceipt }
   | { id: string; kind: 'blocked'; receipt: VerificationReceipt }
-  | { id: string; kind: 'survey'; phase: SurveyPhase };
+  | { id: string; kind: 'survey' };
 
 type Phase = 'idle' | 'parsing' | 'processing' | 'verifying' | 'resolved';
 
 function CustomerSession({
-  rigCode,
   rig,
   link,
   onRow
 }: {
-  rigCode: string;
   rig: CustomerRigView;
   link: LinkStatus;
   onRow: (row: RigRow) => void;
@@ -132,7 +117,7 @@ function CustomerSession({
     {
       id: 'greeting',
       kind: 'agent',
-      text: 'Hi — I can handle payments for you. What would you like to pay?',
+      text: 'Hi — I can pay bills and send money for you. What would you like to pay?',
       time: istClock()
     }
   ]);
@@ -142,37 +127,47 @@ function CustomerSession({
   const [pending, setPending] = useState<{ messageId: string; intent: PaymentIntent } | null>(null);
   const [failure, setFailure] = useState<VerificationReceipt | null>(null);
   const [sheet, setSheet] = useState<'why' | 'details' | null>(null);
+  const [detailsFor, setDetailsFor] = useState<VerificationReceipt | null>(null);
   const [optimisticVerify, setOptimisticVerify] = useState<boolean | null>(null);
   const [actionError, setActionError] = useState<string | null>(null);
 
   const counter = useRef(0);
   const scroller = useRef<HTMLDivElement | null>(null);
-  const shownPhases = useRef<Set<SurveyPhase>>(new Set());
+  const surveyShown = useRef(false);
 
   const nextId = (prefix: string) => {
     counter.current += 1;
     return `${prefix}-${counter.current}`;
   };
-
   const push = (message: Message) => setMessages((current) => [...current, message]);
 
   // Keep the newest card in view. The verdict is the point of the whole demo —
   // it must never land below the fold.
+  //
+  // The survey is the exception: it is taller than the viewport, so scrolling to
+  // the bottom would hand the participant the submit button instead of the first
+  // question. It scrolls itself to the top on mount instead.
+  const lastIsSurvey = messages[messages.length - 1]?.kind === 'survey';
   useEffect(() => {
     const node = scroller.current;
-    if (!node) return;
+    if (!node || lastIsSurvey) return;
     node.scrollTo({ top: node.scrollHeight, behavior: 'smooth' });
-  }, [messages, phase, verifyStage]);
+  }, [messages, phase, verifyStage, lastIsSurvey]);
 
-  // The researcher can summon a survey from the other phone at the right
-  // conversational moment.
+  /**
+   * The survey is researcher-triggered only, never automatic.
+   *
+   * It has to come after the participant has seen BOTH an unchecked payment go
+   * through and a checked one get stopped. Popping it up straight after the
+   * unchecked payment — which is what this used to do — primed them to look for
+   * a problem before they had been shown one.
+   */
   useEffect(() => {
-    const prompted = rig.survey_prompt;
-    if (!prompted || shownPhases.current.has(prompted)) return;
-    shownPhases.current.add(prompted);
-    push({ id: nextId('survey'), kind: 'survey', phase: prompted });
+    if (!rig.survey_open || surveyShown.current) return;
+    surveyShown.current = true;
+    push({ id: nextId('survey'), kind: 'survey' });
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [rig.survey_prompt]);
+  }, [rig.survey_open]);
 
   // Show the participant's own tap immediately, then reconcile with the row the
   // RPC returns. Falls back to the synced value if the call fails.
@@ -189,7 +184,7 @@ function CustomerSession({
     setOptimisticVerify(next);
     setActionError(null);
     try {
-      onRow(await setVerification(rigCode, next));
+      onRow(await setVerification(next));
     } catch (cause) {
       setOptimisticVerify(null);
       setActionError(cause instanceof Error ? cause.message : 'Could not change that setting.');
@@ -230,7 +225,7 @@ function CustomerSession({
     // The verdict is already decided by the time this resolves — the database
     // froze it under a row lock at the instant of the request. The choreography
     // below is pacing for a human, and cannot contradict the result.
-    const decision = requestPayment(rigCode, {
+    const decision = requestPayment({
       label: pending.intent.label,
       recipient: pending.intent.recipient,
       amountPaise: pending.intent.amountPaise
@@ -259,12 +254,13 @@ function CustomerSession({
     const receipt = row.last_verification;
     if (!receipt) {
       setPhase('idle');
-      setActionError('No verification result was returned.');
+      setActionError('No result came back.');
       return;
     }
 
     onRow(row);
-    setPhase('resolved');
+    // Clearing `pending` returns the composer and the suggestions to a usable
+    // state, so another payment can be started straight away.
     setPending(null);
 
     if (receipt.paymentStatus === 'BLOCKED') {
@@ -275,82 +271,48 @@ function CustomerSession({
       push({
         id: nextId('agent'),
         kind: 'agent',
-        text: receipt.result === 'VALID'
-          ? 'Done — and I confirmed the model you authorized was the one used.'
-          : `Done. Your ${receipt.payeeLabel.toLowerCase()} is paid.`,
+        text:
+          receipt.result === 'VALID'
+            ? `Done. I checked that ${receipt.authorizedModel} handled it before sending the money.`
+            : `Done. Your ${receipt.payeeLabel.toLowerCase()} is paid.`,
         time: istClock()
       });
-
-      // The scripted pause after the control condition: the participant has just
-      // watched money move with nothing checked. Ask before the reveal.
-      if (receipt.result === 'NOT_PERFORMED' && !shownPhases.current.has('baseline_unverified')) {
-        shownPhases.current.add('baseline_unverified');
-        push({ id: nextId('survey'), kind: 'survey', phase: 'baseline_unverified' });
-      }
     }
 
     setPhase('idle');
   }
 
-  async function sendSurvey(
-    phaseKey: SurveyPhase,
-    answers: { comfort: number | null; larger: LargerPaymentAnswer | null; freeText: string | null }
-  ) {
-    await submitSurvey(rigCode, phaseKey, answers);
+  async function sendSurvey(answers: SurveyAnswers) {
+    onRow(await submitSurvey(answers));
   }
 
   const busy = phase === 'parsing' || phase === 'processing' || phase === 'verifying';
-  const detailsReceipt = failure ?? lastReceipt(messages);
+  const detailsReceipt = detailsFor ?? failure ?? lastReceipt(messages);
 
   return (
     <>
       <main className="mx-auto flex h-dvh w-full max-w-md flex-col overflow-hidden">
         {/* Header */}
-        <header className="shrink-0 border-b border-line bg-surface/95 px-4 pb-3 pt-safe backdrop-blur">
-          <div className="flex items-center justify-between gap-3">
+        <header className="shrink-0 border-b border-line bg-surface">
+          <div className="flex items-center justify-between gap-3 px-4 pb-2 pt-safe">
             <h1 className="text-[17px] font-bold tracking-tight text-ink">AI Payment Assistant</h1>
             <ConnectionPill link={link} />
           </div>
 
-          <div className="mt-2.5 flex items-center justify-between gap-3">
+          <div className="flex items-center justify-between gap-3 px-4 pb-2.5">
             <div className="min-w-0">
-              <p className="label-eyebrow">Model selected</p>
-              <p className="mt-0.5 flex items-center gap-1.5 truncate text-sm font-semibold text-ink">
-                <span className="h-1.5 w-1.5 shrink-0 rounded-full bg-brand" />
+              <p className="label-eyebrow">Your model</p>
+              <p className="mt-0.5 truncate text-sm font-semibold text-ink">
                 {rig.authorized_model}
               </p>
             </div>
-
-            {/* The independent variable. */}
-            <button
-              type="button"
-              onClick={() => void toggleVerification()}
-              aria-pressed={verificationOn}
-              className="flex shrink-0 items-center gap-2.5 rounded-xl border border-line bg-surface px-3 py-2 transition-colors active:scale-[0.98]"
-            >
-              <span className="text-right">
-                <span className="label-eyebrow block leading-none">AI verification</span>
-                <span
-                  className={`mt-1 block text-xs font-bold leading-none ${
-                    verificationOn ? 'text-brand' : 'text-ink-subtle'
-                  }`}
-                >
-                  {verificationOn ? 'ON' : 'OFF'}
-                </span>
-              </span>
-              <span
-                className={`relative h-6 w-11 shrink-0 rounded-full transition-colors duration-200 ${
-                  verificationOn ? 'bg-brand' : 'bg-line-strong'
-                }`}
-              >
-                <span
-                  className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow-sm transition-all duration-200 ${
-                    verificationOn ? 'left-[22px]' : 'left-0.5'
-                  }`}
-                />
-              </span>
-            </button>
           </div>
+
+          <div className="px-4 pb-3">
+            <VerificationToggle on={verificationOn} onToggle={() => void toggleVerification()} />
+          </div>
+
+          <TrustBanner on={verificationOn} />
         </header>
 
         {/* Transcript */}
@@ -391,9 +353,8 @@ function CustomerSession({
                   <PaymentCard
                     key={message.id}
                     intent={message.intent}
-                    state={
-                      pending?.messageId === message.id ? (busy ? 'working' : 'pending') : 'done'
-                    }
+                    verified={verificationOn}
+                    state={pending?.messageId === message.id ? (busy ? 'working' : 'pending') : 'done'}
                     onConfirm={() => void confirmPayment()}
                   />
                 );
@@ -403,7 +364,10 @@ function CustomerSession({
                   <PaymentApproved
                     key={message.id}
                     receipt={message.receipt}
-                    onDetails={() => setSheet('details')}
+                    onDetails={() => {
+                      setDetailsFor(message.receipt);
+                      setSheet('details');
+                    }}
                   />
                 );
 
@@ -417,13 +381,7 @@ function CustomerSession({
                 );
 
               case 'survey':
-                return (
-                  <TrustSurvey
-                    key={message.id}
-                    phase={message.phase}
-                    onSubmit={(answers) => sendSurvey(message.phase, answers)}
-                  />
-                );
+                return <TrustSurvey key={message.id} onSubmit={sendSurvey} />;
 
               default:
                 return null;
@@ -440,23 +398,23 @@ function CustomerSession({
           ) : null}
         </div>
 
-        {/* Composer */}
+        {/* Composer. The suggestions stay available for the whole session — they
+            used to disappear after the first message, which stranded the
+            participant with no obvious way to pay anything else. */}
         <div className="shrink-0 border-t border-line bg-surface px-4 pb-safe pt-3">
-          {messages.length <= 1 ? (
-            <div className="scroll-slim -mx-1 mb-2.5 flex gap-2 overflow-x-auto px-1 pb-1">
-              {PAYMENT_INTENTS.map((intent) => (
-                <button
-                  key={intent.prompt}
-                  type="button"
-                  onClick={() => void submitRequest(intent.prompt)}
-                  disabled={busy}
-                  className="shrink-0 rounded-full border border-line bg-sunken px-3.5 py-2 text-[13px] font-medium text-ink-muted transition-colors active:scale-[0.98] disabled:opacity-40"
-                >
-                  {intent.prompt}
-                </button>
-              ))}
-            </div>
-          ) : null}
+          <div className="scroll-slim -mx-1 mb-2.5 flex gap-2 overflow-x-auto px-1 pb-1">
+            {PAYMENT_INTENTS.map((intent) => (
+              <button
+                key={intent.prompt}
+                type="button"
+                onClick={() => void submitRequest(intent.prompt)}
+                disabled={busy}
+                className="shrink-0 rounded-full border border-line bg-sunken px-3.5 py-2 text-[13px] font-medium text-ink-muted transition-colors active:scale-[0.98] disabled:opacity-40"
+              >
+                {intent.prompt}
+              </button>
+            ))}
+          </div>
 
           <form
             onSubmit={(event) => {
@@ -480,20 +438,24 @@ function CustomerSession({
               aria-label="Send"
               className="flex h-12 w-12 shrink-0 items-center justify-center rounded-xl bg-ink text-ink-invert transition-all active:scale-95 disabled:opacity-30"
             >
-              {busy ? <Loader2 className="h-5 w-5 animate-spin" /> : <ArrowUp className="h-5 w-5" strokeWidth={2.6} />}
+              {busy ? (
+                <Loader2 className="h-5 w-5 animate-spin" />
+              ) : (
+                <ArrowUp className="h-5 w-5" strokeWidth={2.6} />
+              )}
             </button>
           </form>
-
-          <p className="mt-2 text-center text-2xs text-ink-subtle">{SIMULATION_LABEL}</p>
         </div>
       </main>
 
-      {/* The aha moment */}
       {failure ? (
         <VerificationFailed
           receipt={failure}
           onWhy={() => setSheet('why')}
-          onDetails={() => setSheet('details')}
+          onDetails={() => {
+            setDetailsFor(failure);
+            setSheet('details');
+          }}
           onDismiss={() => setFailure(null)}
         />
       ) : null}
@@ -506,7 +468,10 @@ function CustomerSession({
         <VerificationDetails
           receipt={detailsReceipt}
           sessionCode={rig.session_code}
-          onClose={() => setSheet(null)}
+          onClose={() => {
+            setSheet(null);
+            setDetailsFor(null);
+          }}
         />
       ) : null}
     </>
@@ -523,8 +488,8 @@ function lastReceipt(messages: Message[]): VerificationReceipt | null {
 
 function AgentAvatar() {
   return (
-    <span className="relative mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-line bg-sunken text-ink-muted">
-      <ShieldCheck className="h-4 w-4" strokeWidth={2.2} />
+    <span className="mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-xl border border-line bg-sunken text-ink-muted">
+      <Sparkles className="h-4 w-4" strokeWidth={2.2} />
     </span>
   );
 }

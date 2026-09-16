@@ -1,98 +1,95 @@
-# Verifiable AI Agents for Financial Actions — two-phone research prototype
+# Verifiable AI agents for payments — two-phone research demo
 
-A mobile-first, two-phone demo instrument for in-person user research. It exists to test
-one hypothesis:
+A mobile-first, two-phone demo instrument for in-person user research. It exists to test one
+hypothesis:
 
-> Higher confidence that an AI agent is actually using the model the customer selected will
-> increase the customer's willingness to delegate consequential financial actions to that agent.
-
-A researcher holds one phone (the model-provider console) and hands the other to a participant
-(a polished AI payment assistant). Mid-conversation the researcher silently swaps the deployed
-model. With verification off, the participant's ₹1,850 payment goes through and nothing tells
-them anything changed. With verification on, the same payment is deterministically blocked on a
-model-identity mismatch. The prototype captures a 1–5 comfort rating before and after, so the
-trust delta becomes data instead of an impression.
-
-The whole loop takes 1–2 minutes per participant.
+> Does verifiable model identity actually change a user's willingness to delegate financial
+> actions to an AI agent?
 
 **Live:** https://customer-discovery-theta.vercel.app
 
+You hold one phone (the model-provider console) and hand the other to a participant (a polished AI
+payment assistant). Mid-conversation you silently swap Claude Opus 5 for Claude Haiku 4.5. With
+verification off, the participant's ₹1,850 payment completes and nothing on their screen looks
+wrong. With verification on, the same payment is stopped and told, in plain words, that they were
+being served a cheaper model. One post-demo survey then measures both conditions.
+
+The whole loop takes 1–2 minutes per participant.
+
 ---
 
-## ⚠️ This is a simulation
+## What is real and what is not
 
-**There are no real payments.** No UPI rail, no money movement, no biller.
+There are **no real payments** — no UPI rail, no money movement.
 
-**There is no real cryptographic verification.** No proofs are generated or checked. The
-"commitments" are fixed display strings. The verification step is a string comparison between
-two database columns, dressed in a 1.8-second animation.
+There is **no real cryptographic verification**. No proofs are generated or checked. The
+"fingerprints" are fixed display strings, and the check itself is a string comparison between two
+database columns wrapped in a 1.8-second animation.
 
-**There is no real model verification.** No model is ever loaded, called, or measured. "Frontier
-Model X" and "Frontier Model Lite" are labels on a row.
+**No model is ever loaded or called.** "Claude Opus 5" and "Claude Haiku 4.5" are labels on a row.
+The demo simulates a generic provider substituting a cheaper model; it does not depict anything any
+specific provider does.
 
-Every screen on both phones carries the label
-`Research prototype — cryptographic verification simulated`. Please keep it there.
+There is deliberately **no disclaimer badge in the app**, because you are standing next to the
+participant and explaining it out loud. If this is ever left unattended or shown without narration,
+add one back.
 
-### What this prototype does NOT prove
+### What this demo does NOT prove
 
 The simulated check stands in for exactly one narrow property:
 
-> *Was this computation associated with the model identity the customer authorized?*
+> *Was this request handled by the model the customer approved?*
 
-It says nothing whatsoever about whether:
+It says nothing about whether the model is safe, aligned or unbiased; whether it contains
+backdoors; whether its output was correct; whether the agent decided well; or whether the payment
+itself was a good idea. It also does not require participants to understand commitment schemes,
+SNARKs, or trusted hardware — and deliberately never mentions them.
 
-- the model is safe, aligned, or unbiased
-- the model is free of backdoors
-- the model's output is correct, or even sensible
-- the agent made a good decision
-- the payment itself is a good idea
-- the amount, payee, or timing are right
-- the participant's money would be safe in a real system
-
-It also does not prove that participants understand — or need to understand — commitment
-schemes, SNARKs, STARKs, MPC, or trusted hardware. It deliberately does not teach any of that.
-The product question under test is much smaller:
+The product question is much smaller:
 
 | | The participant's position |
 |---|---|
-| **Without verification** | "I have to trust the AI provider." |
-| **With verification** | "I can independently check that the model I authorized was the one used." |
-
-Whether that difference is worth anything to a real person is the thing we are trying to find out.
+| **Verification off** | "I have to trust the provider." |
+| **Verification on** | "I can check that the model I chose is the one that ran." |
 
 ---
 
 ## Run of show (the 90-second demo)
 
-Pair the two phones once, before the event — see [Setup](#setup-once-per-event). After that you
-never type anything again.
+Open the site on each phone once and pick a role — **Model provider** on yours, **Customer** on
+theirs. There are no pairing codes. Each phone remembers its role, so a reload or a battery swap
+needs one tap.
 
-| # | You (Phone B) | Participant (Phone A) | What you say |
+| # | You (provider phone) | Participant (customer phone) | What you say |
 |---|---|---|---|
-| 1 | — | Hand it over. Verification is **OFF**. | "This assistant pays your bills. You picked Frontier Model X." |
-| 2 | Tap **DOWNGRADE MODEL** | Nothing visibly changes. | *(say nothing)* |
-| 3 | — | Taps "Pay my electricity bill" → **Confirm payment** | "Go ahead and pay it." |
-| 4 | Mirror shows `Approved · unverified` | **Payment approved ✓** ₹1,850 | **"Would you have known the model had changed?"** ← let them answer. Do not answer for them. |
-| 5 | — | Baseline trust question appears automatically | "Quick one before we continue." |
-| 6 | — | Participant flips **AI VERIFICATION → ON** | "Now turn that on." |
-| 7 | *(model is still downgraded)* | Same request again → **VERIFICATION FAILED · PAYMENT BLOCKED** | *(stay quiet and let them read it)* |
-| 8 | — | Taps **Why was my payment blocked?** | "Have a look." |
-| 9 | Tap **RESTORE VERIFIED MODEL** | Same request → **MODEL VERIFIED ✓ · APPROVED** | "And now?" |
-| 10 | Researcher controls → **Ask trust questions** | Phase-2 questions appear | "Same question as before." |
-| 11 | Tap **NEXT PARTICIPANT** | Resets itself in ~1s | Walk to the next person. |
+| 1 | — | Hand it over. Verification is **OFF**. | "This pays your bills. You picked Claude Opus 5." |
+| 2 | Tap **Downgrade to Claude Haiku 4.5** | Nothing visibly changes. | *(say nothing)* |
+| 3 | — | Taps a bill → **Pay ₹1,850** | "Go ahead and pay it." |
+| 4 | Mirror reads `Paid · unchecked` | **Payment completed**, with a reference number — and a list of what the receipt cannot tell them | **"Would you have known the model had changed?"** ← let them answer. Do not answer for them. |
+| 5 | *(model still downgraded)* | Participant flips **Model verification → ON** | "Now turn that on." |
+| 6 | — | Same request → **Payment stopped** · "You were being served a cheaper model" | *(stay quiet and let them read it)* |
+| 7 | — | Taps **Why was my payment stopped?** | "Have a look." |
+| 8 | Tap **Restore Claude Opus 5** | Same request → **Payment verified** | "And now?" |
+| 9 | Researcher controls → **Ask the questions** | The survey appears | "Two minutes, if you don't mind." |
+| 10 | Tap **Next participant** | Resets itself in ~1s | Walk to the next person. |
 
-Step 2 is the one to get right: press it while they are still reading step 1, so the downgrade is
-genuinely invisible to them.
+Step 2 is the one to get right: press it while they are still reading step 1, so the swap is
+genuinely invisible.
 
-Measured against the live deployment: tap → verdict ≈ 2.4s, blocked → restore → approved ≈ 3.3s,
-participant handoff ≈ 0.3s, verification toggle ≈ 30ms.
+**The survey is deliberately not automatic**, and it only ever appears once, at step 9. An earlier
+version popped it up straight after the unchecked payment, which primed people to go hunting for a
+problem before they had been shown one and contaminated the baseline. It now asks about both
+conditions retrospectively, after they have seen both.
+
+Measured against the live deployment: tap → completed ≈ 1.9s, tap → stopped ≈ 2.3s,
+stopped → restored → verified ≈ 3.3s, participant handoff ≈ 0.8s, toggle ≈ 50ms.
 
 ### If something goes wrong mid-conversation
 
-Researcher controls → **Reset demo**. Keeps the same participant and session, clears everything
-else. **Next participant** is the harder reset: new session id, new participant number.
+Researcher controls → **Reset demo**. Keeps the same person and the same record, clears everything
+else. **Next participant** is the harder reset: new record, so the next person's answers can never
+land in this one's row.
 
----
 
 ## Architecture
 
@@ -130,8 +127,13 @@ Six runtime dependencies. No state library, no component library, no server rout
 central design decision and it is made for reliability: one channel, one subscription, one thing
 that can break, at an event where the network is someone's hotspot.
 
-- A **rig** is the persistent pairing between your two phones. It lives for the whole event.
-- A **session** is one participant, identified by `session_id` / `session_code` *inside* that row.
+There is exactly one rig (`rig_code = 'SOLO'`), created on demand by whichever phone opens first —
+`vdemo_solo_rig()` is a safe-to-race get-or-create. There are no pairing codes because there is one
+operator: a phone picks a role and it is already looking at the right demo.
+
+A **session** is one participant, identified by `session_id` / `session_code` *inside* that row.
+`session_code` is shown only in the researcher panel, for your debugging; it is never part of the
+participant experience.
 
 ### No secret key, and the browser cannot write
 
@@ -196,10 +198,15 @@ exported data says so rather than implying a check that never happened.
 
 `vdemo_set_model(code, 'downgrade')` rewrites three columns and sets `model_state`:
 
-| | model | id | commitment |
-|---|---|---|---|
-| authorized | Frontier Model X | FL-LLM-001 | `0x83ab...7f21` |
-| downgraded | Frontier Model Lite | FL-LLM-002 | `0x91cd...42aa` |
+| | model | id | fingerprint | tier shown |
+|---|---|---|---|---|
+| authorized | Claude Opus 5 | `claude-opus-5` | `0x83ab...7f21` | Most capable |
+| downgraded | Claude Haiku 4.5 | `claude-haiku-4-5` | `0x91cd...42aa` | Fastest, cheapest |
+
+Real names, because "Frontier Model X" never sounded like something a person pays for — and the
+swap only bites if the participant understands the substitute is the cheap one. Both live in
+`src/lib/demo.ts` and `vdemo_set_model()`; changing the pair means editing both. Opus → Haiku is
+the sharpest contrast, but Sonnet is a one-constant change if you want a subtler substitution.
 
 The provider console shows this immediately. The customer phone does not, by construction:
 `toCustomerView()` (`src/lib/rigView.ts`) strips every provider-controlled field the instant a
@@ -213,15 +220,20 @@ channels, and it is not implemented. Do not describe the secrecy as a guarantee.
 
 ### Session isolation between participants
 
-`NEXT PARTICIPANT` assigns a fresh `session_id` and `session_code` and rewrites **every** state
+`Next participant` assigns a fresh `session_id` and `session_code` and rewrites **every** state
 column back to its default. The write is exhaustive rather than partial on purpose: that is what
 makes it impossible for a value to survive from one participant to the next. Verified in the test
 suite by asserting each field equals its default and that the previous participant's survey rows
 still exist against the old `session_id`.
 
-The participant never sees or types a code. The customer phone follows the new session over
-Realtime in about a second and shows a brief "Ready for next participant" card so the reset reads
-as intentional rather than as a glitch.
+The participant never sees or types anything. The customer phone follows the new session over
+Realtime in about a second and shows a brief "Ready for the next person" card so the reset reads as
+intentional rather than as a glitch.
+
+`Reset demo` deliberately does *not* start a new record — it keeps the same participant, for
+recovering mid-conversation. That distinction matters for the data: a survey answered after a reset
+updates that participant's existing row, which is correct, and is also why the test suite normalises
+with `Next participant` rather than `Reset demo`.
 
 ---
 
@@ -265,12 +277,23 @@ PAYMENT_REQUESTED ──────► VERIFYING          (only when verificati
 | `last_verification` | frozen receipt (jsonb) for the most recent attempt |
 | `last_event`, `survey_prompt` | researcher-facing breadcrumb, survey trigger |
 
-`vdemo_responses` — **the research output.** One row per (participant, phase).
+`vdemo_responses` — **the research output.** One row per participant, keyed to `session_id`.
 
-`phase` is `baseline_unverified` or `after_verification`; `comfort` is 1–5; `larger_payment` is
-yes/maybe/no; `free_text` is the open question. `verification_enabled_at_time` is derived from the
-receipt of the run being rated, not from the live toggle — otherwise a participant who answers
-slowly while you flip the switch gets filed under the wrong condition.
+Both conditions sit side by side in the same row, because the comparison is the finding:
+
+| column | question |
+|---|---|
+| `comfort_without`, `comfort_with` | 1–5 comfort, unchecked vs checked — the headline delta |
+| `limit_without`, `limit_with` | most they would let an agent pay unasked, as a band. **This is the stronger measure**: willingness to delegate is literally an amount, and a band is harder to answer politely than a rating |
+| `noticed_swap` | did they suspect the swap before being told? If people say yes, the premise is weaker than we think |
+| `what_mattered` | the block, the visibility, both, or neither — these are different products |
+| `would_switch` | willingness to act, not just to feel better |
+| `free_text` | "What would make you trust an AI agent with your money?" |
+
+Every field is optional and submit is always live: a partial answer is real data, and someone
+walking away mid-survey should not cost us the answers they did give. Re-submitting upserts on
+`session_id`, so a participant has exactly one row and can change an answer without creating a
+second.
 
 `vdemo_events` — append-only timeline, for reconstructing a demo afterwards.
 
@@ -278,26 +301,14 @@ No account, no email, no PII. A participant is a counter.
 
 ### Export
 
-Researcher controls → **CSV** or **JSON**. CSV columns:
-`participant_no, phase, comfort, larger_payment, verification_enabled_at_time, free_text,
-session_code, created_at`.
+Researcher controls → **CSV** or **JSON**. The panel also shows a live count of saved responses,
+so it is obvious at a glance that answers are reaching the backend rather than only the screen.
 
 The publishable key cannot read `vdemo_responses` directly; the export comes back through
 `vdemo_export()`.
 
 ---
 
-## Setup (once per event)
-
-1. Open the deployed URL on **your** phone → **Start new demo**. Note the 4-character code.
-2. Open the same URL on the **participant** phone → enter the code → **Join as customer**.
-3. On your phone, tap **Done — phone is paired** to hide the pairing card.
-
-Both phones remember their role and rig, so a reload or a battery swap restores them with one tap.
-The phones do **not** need to be on the same network — state goes through Supabase, so mobile data
-on two different carriers is fine.
-
----
 
 ## Local development
 
@@ -371,6 +382,12 @@ Google Chrome so there is no browser to download:
 - restore → retry → verified and approved, inside 10 seconds
 - `NEXT PARTICIPANT` clears the conversation, the questions, the model and the toggle, advances
   the counter, and leaks nothing — in under 5 seconds with no typing
+- an unchecked receipt reads "completed", never "approved" or "verified", and lists its unknowns
+- the survey does **not** appear on its own after the unchecked payment
+- the suggestion chips and the text input still work after a payment has completed
+- the survey opens on its first question rather than scrolled to the submit button
+- a value the verdict table renders as rose is actually rose in computed pixels
+- each participant gets their own response row, verified by delta rather than absolute count
 - no console or page errors on either phone
 
 Each run creates a real rig and leaves its rows behind on purpose, so you can inspect them. Clear
@@ -383,6 +400,13 @@ Two real bugs were caught this way and are worth knowing about if you refactor:
   `session_id`, not on `rig`.
 - The verification toggle lagged up to 1.5s because it waited for a sync round-trip instead of
   using the row the RPC already returns. It is now optimistic and reconciles on response.
+- A colour token named `base` collided with Tailwind's `text-base` font-size utility, so that class
+  emitted **both** a font-size and `color: var(--vd-canvas)`. `.btn` uses `text-base`, so every
+  button was one missing colour class away from rendering canvas-on-canvas, and one verdict value
+  was already invisible. The token is now `canvas`; never name a colour after a size-scale step
+  (`xs`, `sm`, `base`, `lg`, …). The suite now asserts computed colour, not class names.
+- The survey auto-scrolled to the bottom of the transcript, which on a card taller than the screen
+  handed the participant the submit button instead of the first question.
 
 ---
 
@@ -465,7 +489,12 @@ Colour discipline is load-bearing rather than decorative:
 - **amber** — warnings, including the provider's downgraded state
 - **near-black** — primary actions
 
-Rose appears nowhere in the app except a failed verification, which is what makes that one screen
-land. The customer phone renders on a light consumer canvas and the provider phone on a dark
+Rose appears nowhere in the app except a stopped payment, which is what makes that one screen
+land. Amber does the opposite work: it marks the *absence* of a check, on the toggle, the trust
+banner, the payment card and the unchecked receipt.
+
+The assurance line under the header is modelled on how messaging apps state end-to-end encryption —
+a lock, one short sentence, always present. Its OFF state is as loud as its ON state, because the
+first build of this demo failed precisely by making an unchecked payment feel completely normal. The customer phone renders on a light consumer canvas and the provider phone on a dark
 infrastructure canvas; both bind the same semantic tokens, so every component class works on
 either surface untouched. Tokens and primitives are ported from the sibling `SPOT` project.

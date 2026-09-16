@@ -14,7 +14,7 @@
 
 :root {
   /* Canvas */
-  --vd-base: 249 250 251;
+  --vd-canvas: 249 250 251;
   --vd-surface: 255 255 255;
   --vd-raised: 255 255 255;
   --vd-sunken: 244 245 247;
@@ -51,7 +51,7 @@
 }
 
 .theme-provider {
-  --vd-base: 8 11 16;
+  --vd-canvas: 8 11 16;
   --vd-surface: 14 19 26;
   --vd-raised: 20 27 36;
   --vd-sunken: 11 15 21;
@@ -88,7 +88,7 @@ body {
 }
 
 body {
-  @apply bg-base text-ink font-sans antialiased;
+  @apply bg-canvas text-ink font-sans antialiased;
   /* Prevent the rubber-band scroll that makes a demo feel broken when someone
      is holding the phone and swiping around the verdict screen. */
   overscroll-behavior: none;

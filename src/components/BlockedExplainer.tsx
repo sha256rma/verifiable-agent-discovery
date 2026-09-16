@@ -1,16 +1,17 @@
 'use client';
 
-import { BLOCKED_EXPLAINER, PRODUCTION_NOTE, SIMULATION_LABEL } from '@/lib/demo';
+import { BLOCKED_EXPLAINER } from '@/lib/demo';
 import { Sheet } from './Sheet';
 import { VerdictRow, VerdictTable } from './VerdictTable';
 import type { VerificationReceipt } from '@/lib/types';
 
 /**
- * "Why was my payment blocked?"
+ * "Why was my payment stopped?"
  *
  * Framed as protection rather than failure. The participant did not lose a
- * payment; a payment they did not actually authorize was stopped. That reframe
- * is what we are testing, so the title carries it.
+ * payment; a payment they never actually authorised was stopped. The closing
+ * line is the one that does the work for the research question — it names the
+ * counterfactual, which is the thing they cannot see for themselves.
  */
 export function BlockedExplainer({
   receipt,
@@ -35,17 +36,15 @@ export function BlockedExplainer({
 
       <div className="card-inset mt-5 px-4 py-1">
         <VerdictTable>
-          <VerdictRow label="Authorized" value={receipt.authorizedModel} />
-          <VerdictRow label="Detected" value={receipt.detectedModel} tone="danger" />
-          <VerdictRow label="Verification" value="FAILED" tone="danger" />
-          <VerdictRow label="Payment" value="BLOCKED" tone="danger" />
+          <VerdictRow label="You approved" value={receipt.authorizedModel} />
+          <VerdictRow label="Actually used" value={receipt.detectedModel} tone="danger" />
+          <VerdictRow label="Payment" value="STOPPED" tone="danger" />
         </VerdictTable>
       </div>
 
-      <div className="mt-5 space-y-2 border-t border-line pt-4">
-        <p className="text-2xs leading-relaxed text-ink-subtle">{PRODUCTION_NOTE}</p>
-        <p className="text-2xs text-ink-subtle">{SIMULATION_LABEL}</p>
-      </div>
+      <p className="mt-5 rounded-xl border border-warn/30 bg-warn-wash px-4 py-3 text-sm leading-relaxed text-ink-muted">
+        {BLOCKED_EXPLAINER.footer}
+      </p>
     </Sheet>
   );
 }

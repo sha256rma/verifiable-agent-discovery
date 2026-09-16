@@ -11,9 +11,8 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: 'AI Payment Assistant · Research prototype',
-  description:
-    'A two-phone research prototype exploring whether independent verification of model identity changes willingness to delegate financial actions to an AI agent. Simulation only — no real payments and no real cryptographic verification.',
+  title: 'AI Payment Assistant',
+  description: 'Delegate a payment to an AI agent, and check which model actually handled it.',
   robots: { index: false, follow: false }
 };
 

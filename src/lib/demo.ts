@@ -1,12 +1,10 @@
 /**
  * Every constant and every participant-facing string, in one file.
  *
- * Two reasons this is centralised rather than inlined in components:
- *   1. The demo values have to be identical on both phones and in the exported
- *      research data, or the verdict table stops being convincing.
- *   2. The honest-scope wording is the part of this prototype most likely to be
- *      edited under time pressure. Keeping it in one place makes it hard to
- *      accidentally leave an overclaim on one screen.
+ * The wording is the experiment. A receipt that reads "Payment approved" when
+ * nothing was checked is a different stimulus from one that reads "Payment
+ * completed" alongside a list of what nobody can tell you — so the copy lives in
+ * one place where it can be reviewed as a whole rather than drifting per screen.
  */
 
 import type { ModelState } from './types';
@@ -15,16 +13,23 @@ import type { ModelState } from './types';
 /*  Models                                                                    */
 /* -------------------------------------------------------------------------- */
 
+/**
+ * Real model names, because "Frontier Model X" never sounded like something a
+ * person pays for — and the downgrade only bites if the participant understands
+ * that the substitute is the cheap one.
+ */
 export const AUTHORIZED_MODEL = {
-  name: 'Frontier Model X',
-  id: 'FL-LLM-001',
-  commitment: '0x83ab...7f21'
+  name: 'Claude Opus 5',
+  id: 'claude-opus-5',
+  commitment: '0x83ab...7f21',
+  tier: 'Most capable'
 } as const;
 
 export const DOWNGRADED_MODEL = {
-  name: 'Frontier Model Lite',
-  id: 'FL-LLM-002',
-  commitment: '0x91cd...42aa'
+  name: 'Claude Haiku 4.5',
+  id: 'claude-haiku-4-5',
+  commitment: '0x91cd...42aa',
+  tier: 'Fastest, cheapest'
 } as const;
 
 export function modelFor(state: ModelState) {
@@ -40,17 +45,10 @@ export const DEFAULT_PAYMENT = {
   amountPaise: 185_000, // Rs 1,850
   label: 'Electricity Bill',
   recipient: 'Maharashtra State Electricity Board',
-  /** Shown in the receipt so it reads like a real biller reference. */
   consumerNo: 'MSEDCL 4417 2290'
 } as const;
 
-/**
- * The first nonce matches the value in the product spec so the very first demo of
- * the day reads exactly as designed; later attempts get a fresh one, because a
- * nonce that never changes would misrepresent what a nonce is for.
- */
 export const FIRST_NONCE = '829173';
-
 export const TXN_PREFIX = 'SIMULATED-UPI-';
 
 /* -------------------------------------------------------------------------- */
@@ -58,7 +56,6 @@ export const TXN_PREFIX = 'SIMULATED-UPI-';
 /* -------------------------------------------------------------------------- */
 
 export interface PaymentIntent {
-  /** Tappable suggestion text, also what matches free-text input. */
   prompt: string;
   label: string;
   recipient: string;
@@ -66,18 +63,13 @@ export interface PaymentIntent {
   keywords: string[];
 }
 
-/**
- * Electricity is first and is the recommended opener: a bill is more relatable
- * than "send Rs 100", and a bill the participant recognises makes the blocked
- * screen land harder.
- */
 export const PAYMENT_INTENTS: PaymentIntent[] = [
   {
     prompt: 'Pay my electricity bill',
     label: 'Electricity Bill',
     recipient: 'Maharashtra State Electricity Board',
     amountPaise: 185_000,
-    keywords: ['electric', 'electricity', 'power', 'current', 'mseb', 'msedcl', 'bill']
+    keywords: ['electric', 'electricity', 'power', 'current', 'mseb', 'msedcl']
   },
   {
     prompt: 'Pay my rent',
@@ -112,7 +104,7 @@ export const PAYMENT_INTENTS: PaymentIntent[] = [
 /**
  * Deliberately simple keyword matching — this is a scripted demo, not an NLU
  * exercise. Anything unrecognised falls back to the electricity bill so the
- * researcher's flow never dead-ends in front of a participant.
+ * flow never dead-ends in front of a participant.
  */
 export function matchIntent(input: string): PaymentIntent {
   const text = input.toLowerCase();
@@ -126,55 +118,93 @@ export function matchIntent(input: string): PaymentIntent {
 /*  Choreography timings (ms)                                                 */
 /* -------------------------------------------------------------------------- */
 
-/**
- * Tuned so that: downgrade -> blocked -> restore -> approved fits inside the
- * ten seconds a person will stand still for at a networking event.
- */
 export const TIMING = {
-  /** Verification OFF: one soft "thinking" beat, then approval. */
   unverifiedThinking: 1_200,
-  /** Verification ON: three stages, ~1.8s total. */
   verifyStage: 600,
-  /** Beat between the final stage resolving and the verdict appearing. */
   verdictReveal: 320,
-  /** How long "Ready for next participant" shows before the clean slate. */
   handoff: 1_100
 } as const;
 
 export const VERIFY_STAGES = [
-  'Requesting model identity',
-  'Comparing model commitment',
-  'Checking execution record'
+  'Checking which model ran this',
+  'Comparing it against what you approved',
+  'Confirming the record is genuine'
 ] as const;
 
 /* -------------------------------------------------------------------------- */
-/*  Honest-scope copy                                                         */
+/*  Trust framing                                                             */
 /* -------------------------------------------------------------------------- */
 
 /**
- * The single most important string in the codebase. It appears on every screen
- * of both phones. This prototype simulates a verification layer; it does not
- * implement one, and it must never imply otherwise.
+ * The always-on assurance line, modelled on how messaging apps state
+ * end-to-end encryption: one short sentence, a lock, present whether or not
+ * anyone is thinking about it. Its absence has to be as legible as its presence,
+ * which is why the OFF copy is a plain statement of fact and not a warning.
  */
-export const SIMULATION_LABEL = 'Research prototype — cryptographic verification simulated';
+export const TRUST_BANNER = {
+  on: 'The model you chose is checked before any money moves',
+  off: 'Nobody is checking which model handles your money'
+} as const;
 
-export const SIMULATION_LABEL_SHORT = 'Simulated verification';
+export const TOGGLE_COPY = {
+  label: 'Model verification',
+  onDetail: `Every payment is checked against ${AUTHORIZED_MODEL.name} before it goes through.`,
+  offDetail: 'Payments go through on the provider’s word alone.'
+} as const;
 
-export const PRODUCTION_NOTE =
-  'In a production system, this verification would be backed by cryptographic proofs. This demo simulates the result.';
+/**
+ * What an unverified receipt cannot tell you.
+ *
+ * This list is the fix for the most important thing the first run got wrong: a
+ * clean receipt with a reference number felt safe, which is exactly the
+ * illusion the product exists to break. Stating the absence plainly is more
+ * honest than a warning icon, and it gives the participant something concrete
+ * to react to.
+ */
+export const UNVERIFIED_UNKNOWNS = [
+  'Which AI model actually handled this payment',
+  'Whether the model you chose is the one that ran',
+  'Whether a cheaper model was quietly used instead',
+  'Nothing here is independently checked — this is the provider’s word'
+] as const;
 
-/** Shown in the verification details panel, so the narrow claim stays visible. */
-export const NARROW_CLAIM =
-  'This check only asks whether the computation was associated with the model identity you authorized. It does not assess whether the model is safe, unbiased, correct, or whether the payment itself is a good idea.';
+/** What a verified receipt does establish. Deliberately narrow. */
+export const VERIFIED_ASSURANCES = [
+  `${AUTHORIZED_MODEL.name} is the model that actually ran this`,
+  'Checked independently, not just claimed by the provider',
+  'If it had not matched, this payment would have been stopped'
+] as const;
+
+/* -------------------------------------------------------------------------- */
+/*  Blocked-payment copy                                                      */
+/* -------------------------------------------------------------------------- */
+
+/**
+ * Plain prose, not protocol vocabulary. "Model mismatch" is precise and means
+ * nothing to a participant; "you were served a cheaper model" is what actually
+ * happened to them.
+ */
+export const BLOCKED_COPY = {
+  title: 'Payment stopped',
+  caption: (authorized: string, used: string) =>
+    `You were being served a cheaper model. You approved ${authorized}, but ${used} is what actually handled this request — so the payment was not sent.`,
+  tableTitle: 'What was checked',
+  pill: 'Downgraded model'
+} as const;
 
 export const BLOCKED_EXPLAINER = {
-  title: 'Your payment was protected.',
+  title: 'Your money stayed put.',
   body: [
-    'You authorized Frontier Model X for this action.',
-    'The system detected that the computation was associated with a different model.',
-    'Because the model identity did not match your authorization, the payment was not executed.'
-  ]
+    `You told this assistant to use ${AUTHORIZED_MODEL.name}.`,
+    `The request was actually handled by ${DOWNGRADED_MODEL.name} — a cheaper model you never agreed to.`,
+    'Because those two did not match, the payment was stopped before any money moved.'
+  ],
+  footer:
+    'Without this check, the payment would simply have gone through, and nothing on your screen would have looked wrong.'
 } as const;
+
+export const NARROW_CLAIM =
+  'This check answers one question: was the request handled by the model you approved? It does not judge whether the model is safe or unbiased, whether its answer was correct, or whether the payment itself was a good idea.';
 
 /* -------------------------------------------------------------------------- */
 /*  Survey                                                                    */
@@ -188,43 +218,62 @@ export const COMFORT_SCALE = [
   { value: 5, label: 'Very comfortable' }
 ] as const;
 
-export const SURVEY_COPY = {
-  baseline_unverified: {
-    eyebrow: 'One quick question',
-    comfort: 'How comfortable would you be allowing this AI agent to make a payment on your behalf?',
-    larger: 'Would you allow the agent to make a larger payment?',
-    freeText: null
-  },
-  after_verification: {
-    eyebrow: 'Same question, one more time',
-    comfort: 'How comfortable would you NOW be allowing this AI agent to make a payment on your behalf?',
-    larger: 'Would you allow the agent to make a larger payment?',
-    freeText: 'What would make you trust an AI agent with your money?'
-  }
-} as const;
-
-/* -------------------------------------------------------------------------- */
-/*  Session codes                                                             */
-/* -------------------------------------------------------------------------- */
+export const SPEND_BANDS = [
+  { value: 'none', label: 'Nothing' },
+  { value: 'upto_500', label: 'Up to ₹500' },
+  { value: 'upto_5k', label: 'Up to ₹5,000' },
+  { value: 'upto_50k', label: 'Up to ₹50,000' },
+  { value: 'any', label: 'Any amount' }
+] as const;
 
 /**
- * Crockford-ish alphabet: no 0/O, no 1/I/L, no U. A code is read aloud and typed
- * once by the researcher during setup, so ambiguous glyphs are pure downside.
+ * One survey, shown only after the participant has seen BOTH a payment with no
+ * checking and a payment that got stopped.
+ *
+ * The earlier design asked about comfort straight after the unverified payment,
+ * which primed them to hunt for a problem before they had been shown one, and
+ * contaminated the baseline. Asking both conditions retrospectively keeps the
+ * comparison and removes the cue.
+ *
+ * The spend-limit pair matters more than the comfort pair: "willingness to
+ * delegate" is literally an amount, and a band is harder to answer politely
+ * than a 1-5 rating.
  */
-const CODE_ALPHABET = '23456789ABCDEFGHJKMNPQRSTVWXYZ';
+export const SURVEY = {
+  intro: 'You just saw the same payment two ways. A few quick questions.',
+  comfortWithout: 'Thinking back to the first payment — how comfortable were you letting this assistant pay on your behalf?',
+  comfortWith: 'And with the check switched on?',
+  limitWithout: 'With no checking, what is the most you would let an AI agent pay without asking you first?',
+  limitWith: 'With the check switched on, what is the most you would let it pay?',
+  noticedSwap: 'Before we showed you, did you have any idea a different model had been used?',
+  whatMattered: 'Which part mattered more to you?',
+  wouldSwitch: 'Would you move to a provider that shows you this check?',
+  freeText: 'What would make you trust an AI agent with your money?'
+} as const;
 
-export function generateCode(length = 4): string {
-  let out = '';
-  for (let i = 0; i < length; i += 1) {
-    out += CODE_ALPHABET[Math.floor(Math.random() * CODE_ALPHABET.length)];
-  }
-  return out;
-}
+export const NOTICED_OPTIONS = [
+  { value: 'no', label: 'No idea' },
+  { value: 'unsure', label: 'Not sure' },
+  { value: 'yes', label: 'I suspected' }
+] as const;
+
+export const MATTERED_OPTIONS = [
+  { value: 'blocked', label: 'That the payment was stopped' },
+  { value: 'visibility', label: 'That I could see which model ran' },
+  { value: 'both', label: 'Both equally' },
+  { value: 'neither', label: 'Neither really' }
+] as const;
+
+export const SWITCH_OPTIONS = [
+  { value: 'yes', label: 'Yes' },
+  { value: 'maybe', label: 'Maybe' },
+  { value: 'no', label: 'No' }
+] as const;
+
+/* -------------------------------------------------------------------------- */
+/*  Misc                                                                      */
+/* -------------------------------------------------------------------------- */
 
 export function generateNonce(): string {
   return String(Math.floor(100_000 + Math.random() * 900_000));
-}
-
-export function normalizeCode(input: string): string {
-  return input.trim().toUpperCase().replace(/[^0-9A-Z]/g, '');
 }
